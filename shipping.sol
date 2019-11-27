@@ -25,7 +25,7 @@ contract ShippingContract {
     function wrap(uint256 itemId) public returns (uint, string memory, bool, bool, bool, bool, bool) {
         Item storage item = items[itemId];
         if (item._isWrapped == false && item._isLoaded == false){
-            item._isWrapped = true   ;
+            item._isWrapped = true;
         }
 
         return getItem(item._id);
@@ -34,7 +34,7 @@ contract ShippingContract {
     function unWrap(uint256 itemId) public returns (uint256, string memory, bool, bool, bool, bool, bool){
         Item storage item = items[itemId];
         if (item._isWrapped == true && item._isLoaded == false){
-            item._isWrapped = false   ;
+            item._isWrapped = false;
         }
 
         return getItem(item._id);

@@ -4,10 +4,11 @@ contract ShippingContract {
  
     /////  :> STRUCTS <:  ////////////////////////////////////////////////////////////////////////////////////////////////////
    
-    struct Order {
+    struct Shipment {
         uint256 _id;
         uint256 _itemsCount;
         string _companyName;
+        uint256 _orderId;
         mapping(uint => Item) items;
     }
     
@@ -24,48 +25,39 @@ contract ShippingContract {
     
     /////  :> STATE <:  ////////////////////////////////////////////////////////////////////////////////////////////////////
     
-    mapping (uint256 => Order) private ordersList;
-    uint256 private itemsCount;
-    uint256 private ordersCount;
-    
-    
-    
-    /////  :> CONSTRUCTOR <:  ////////////////////////////////////////////////////////////////////////////////////////////////////
-    
-    constructor() public {
-        itemsCount = 0;
-        ordersCount = 0;
-    }
-    
+    mapping (uint256 => Shipment) private shipmentsList;
+    uint256 private itemsCount = 0;
+    uint256 private shipmentsCount = 0;
+
     
     
     /////  :> FUNCTIONS <:  ////////////////////////////////////////////////////////////////////////////////////////////////////    
     
-    function createOrder(string memory  companyName) public returns (uint256) {
-        incrementOrdersCount();
-        ordersList[ordersCount - 1] = Order(ordersCount, 0, companyName);
+    function createShipment(string memory  companyName, uint256 orderId) public returns (uint256, uint256, string memory) {
+        incrementShipmentsCount();
+        shipmentsList[shipmentsCount - 1] = Shipment(shipmentsCount, 0, companyName, orderId);
         
-        return ordersCount;
+        return getShipment(shipmentsCount);
     }
     
     
     
-    function addItem(uint256 orderId, string memory _name ) public returns (uint256, string memory, bool, bool, bool, bool, bool) {
+    function addItem(uint256 shipmentId, string memory _name ) public returns (uint256, string memory, bool, bool, bool, bool, bool) {
         incrementItemsCount();
-        uint256 currentItemIndexinOrder = ordersList[orderId - 1]._itemsCount;
+        uint256 currentItemIndexinOrder = shipmentsList[shipmentId - 1]._itemsCount;
         Item memory newItem = Item(itemsCount, _name, false, false, false, false, false);
         
-        ordersList[orderId - 1].items[currentItemIndexinOrder] = newItem;
-        incrementItemsCountInOrder(orderId);
+        shipmentsList[shipmentId - 1].items[currentItemIndexinOrder] = newItem;
+        incrementItemsCountInOrder(shipmentId);
         
-        return getItem(orderId, itemsCount);
+        return getItem(shipmentId, itemsCount);
     }
       
       
       
-    function recordAction(uint256 orderId, uint256 itemId, string memory action) public returns (uint256, string memory, bool, bool, bool, bool, bool) {
-        uint256 itemIndex = getIndexAtItem(orderId, itemId);
-        Item memory item = ordersList[orderId - 1].items[itemIndex];
+    function recordAction(uint256 shipmentId, uint256 itemId, string memory action) public returns (uint256, string memory, bool, bool, bool, bool, bool) {
+        uint256 itemIndex = getIndexAtItem(shipmentId, itemId);
+        Item memory item = shipmentsList[shipmentId - 1].items[itemIndex];
 
         if (keccak256(abi.encodePacked((action))) == keccak256(abi.encodePacked(("wrap"))) && item._isWrapped == false && item._isLoaded == false){
             item._isWrapped = true; 
@@ -85,35 +77,31 @@ contract ShippingContract {
         else if (keccak256(abi.encodePacked((action))) == keccak256(abi.encodePacked(("clear"))) && item._isCleared == false){
             item._isCleared = true;
         }
-        else if (keccak256(abi.encodePacked((action))) == keccak256(abi.encodePacked(("deliver"))) && item._isDelivered == false && isOrderDeliverable(orderId) ){
+        else if (keccak256(abi.encodePacked((action))) == keccak256(abi.encodePacked(("deliver"))) && item._isDelivered == false && isShipmentDeliverable(shipmentId) ){
             item._isDelivered = true;
         }
         
-        // item._isWrapped = true;
-        
-        ordersList[orderId - 1].items[itemIndex] = item;
-        
-        return getItem(orderId, item._id);
+        shipmentsList[shipmentId - 1].items[itemIndex] = item;
+        return getItem(shipmentId, item._id);
     }
     
     
     
     /////  :> VIEWS & UTILITIES <:  ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function getItem(uint256 orderId, uint256 itemId) public view returns (uint256, string memory, bool, bool, bool, bool, bool){
-        for(uint256 index = 0; index < ordersList[orderId - 1]._itemsCount; index++){
-            if (ordersList[orderId - 1].items[index]._id == itemId){
-                return getItemAtIndex(orderId, index);
+    function getItem(uint256 shipmentsId, uint256 itemId) public view returns (uint256, string memory, bool, bool, bool, bool, bool){
+        for(uint256 index = 0; index < shipmentsList[shipmentsId - 1]._itemsCount; index++){
+            if (shipmentsList[shipmentsId - 1].items[index]._id == itemId){
+                return getItemAtIndex(shipmentsId, index);
             }
         }
     }
     
-    function isOrderDelivered(uint256 orderId) public view returns (bool){
+    function isShipmentDelivered(uint256 shipmentsId) public view returns (bool){
         bool isDelivered = true;
         
-        for (uint index = 0; index < ordersList[orderId - 1]._itemsCount; index++) {
-          Item storage item = ordersList[orderId].items[index];
-          if (item._isDelivered == false) {
+        for (uint index = 0; index < shipmentsList[shipmentsId - 1]._itemsCount; index++) {
+          if (shipmentsList[shipmentsId - 1].items[index]._isDelivered == false) {
               isDelivered = false;
           }
         }
@@ -121,29 +109,29 @@ contract ShippingContract {
         return isDelivered;
     }
     
-    function getOrder(uint256 orderId) public view returns (uint256, uint256, string memory){
-        Order memory order = ordersList[orderId - 1];
-        return(order._id, order._itemsCount, order._companyName);
+    function getShipment(uint256 shipmentsId) public view returns (uint256, uint256, string memory){
+        Shipment memory shipment = shipmentsList[shipmentsId - 1];
+        return(shipment._id, shipment._itemsCount, shipment._companyName);
     }
     
-    function getItemAtIndex(uint256 orderId, uint256 index) private view returns (uint256, string memory, bool, bool, bool, bool, bool){
-        Item storage i = ordersList[orderId - 1].items[index];
+    function getItemAtIndex(uint256 shipmentsId, uint256 index) private view returns (uint256, string memory, bool, bool, bool, bool, bool){
+        Item storage i = shipmentsList[shipmentsId - 1].items[index];
         return (i._id, i._name, i._isCertified, i._isWrapped, i._isLoaded, i._isCleared, i._isDelivered);
     }
     
-    function getIndexAtItem(uint256 orderId, uint256 itemId) private view returns (uint256){
-        for(uint256 index = 0; index < ordersList[orderId - 1]._itemsCount; index++){
-            if (ordersList[orderId - 1].items[index]._id == itemId){
+    function getIndexAtItem(uint256 shipmentsId, uint256 itemId) private view returns (uint256){
+        for(uint256 index = 0; index < shipmentsList[shipmentsId - 1]._itemsCount; index++){
+            if (shipmentsList[shipmentsId - 1].items[index]._id == itemId){
                 return index;
             }
         }
     }
     
-    function isOrderDeliverable(uint256 orderId) private view returns (bool){
+    function isShipmentDeliverable(uint256 shipmentsId) private view returns (bool){
         bool isDeliverable = true;
         
-        for (uint index = 0; index < ordersList[orderId - 1]._itemsCount; index++) {
-          Item memory item = ordersList[orderId - 1].items[index];
+        for (uint index = 0; index < shipmentsList[shipmentsId - 1]._itemsCount; index++) {
+          Item memory item = shipmentsList[shipmentsId - 1].items[index];
 
           if (isDeliverable == false){
             return false;
@@ -169,18 +157,18 @@ contract ShippingContract {
         return isDeliverable;
     }
     
-    function getItemsCountInOrder(uint256 orderId) private view returns (uint256){
-        return ordersList[orderId - 1]._itemsCount;
+    function getItemsCountInShipment(uint256 orderId) private view returns (uint256){
+        return shipmentsList[orderId - 1]._itemsCount;
     }
     
     function incrementItemsCountInOrder(uint256 orderId) private returns (uint256){
-        ordersList[orderId - 1]._itemsCount++;
-        return ordersList[orderId - 1]._itemsCount;
+        shipmentsList[orderId - 1]._itemsCount++;
+        return shipmentsList[orderId - 1]._itemsCount;
     }
     
-    function incrementOrdersCount() private returns (uint256){
-        ordersCount = ordersCount + 1;
-        return ordersCount;
+    function incrementShipmentsCount() private returns (uint256){
+        shipmentsCount = shipmentsCount + 1;
+        return shipmentsCount;
     }
     
     function incrementItemsCount() private returns (uint256){

@@ -22,12 +22,20 @@ contract ShippingContract {
     }
     
     
-    
     /////  :> STATE <:  ////////////////////////////////////////////////////////////////////////////////////////////////////
     
-    mapping (uint256 => Order) public ordersList;
-    uint256 private itemsCount = 0;
-    uint256 private ordersCount = 0;
+    mapping (uint256 => Order) private ordersList;
+    uint256 private itemsCount;
+    uint256 private ordersCount;
+    
+    
+    
+    /////  :> CONSTRUCTOR <:  ////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    constructor() public {
+        itemsCount = 0;
+        ordersCount = 0;
+    }
     
     
     
@@ -57,7 +65,7 @@ contract ShippingContract {
       
     function recordAction(uint256 orderId, uint256 itemId, string memory action) public returns (uint256, string memory, bool, bool, bool, bool, bool) {
         uint256 itemIndex = getIndexAtItem(orderId, itemId);
-        Item storage item = ordersList[orderId - 1].items[itemIndex];
+        Item memory item = ordersList[orderId - 1].items[itemIndex];
 
         if (keccak256(abi.encodePacked((action))) == keccak256(abi.encodePacked(("wrap"))) && item._isWrapped == false && item._isLoaded == false){
             item._isWrapped = true; 
@@ -113,6 +121,11 @@ contract ShippingContract {
         return isDelivered;
     }
     
+    function getOrder(uint256 orderId) public view returns (uint256, uint256, string memory){
+        Order memory order = ordersList[orderId - 1];
+        return(order._id, order._itemsCount, order._companyName);
+    }
+    
     function getItemAtIndex(uint256 orderId, uint256 index) private view returns (uint256, string memory, bool, bool, bool, bool, bool){
         Item storage i = ordersList[orderId - 1].items[index];
         return (i._id, i._name, i._isCertified, i._isWrapped, i._isLoaded, i._isCleared, i._isDelivered);
@@ -130,7 +143,7 @@ contract ShippingContract {
         bool isDeliverable = true;
         
         for (uint index = 0; index < ordersList[orderId - 1]._itemsCount; index++) {
-          Item storage item = ordersList[orderId - 1].items[index];
+          Item memory item = ordersList[orderId - 1].items[index];
 
           if (isDeliverable == false){
             return false;

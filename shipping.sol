@@ -33,7 +33,7 @@ contract ShippingContract {
     
     /////  :> FUNCTIONS <:  ////////////////////////////////////////////////////////////////////////////////////////////////////    
     
-    function createShipment(string memory  companyName, uint256 orderId) public returns (uint256, uint256, string memory) {
+    function createShipment(string memory companyName, uint256 orderId) public returns (uint256, uint256, string memory, bool) {
         incrementShipmentsCount();
         shipmentsList[shipmentsCount - 1] = Shipment(shipmentsCount, 0, companyName, orderId);
         
@@ -80,7 +80,7 @@ contract ShippingContract {
         else if (keccak256(abi.encodePacked((action))) == keccak256(abi.encodePacked(("deliver"))) && item._isDelivered == false && isShipmentDeliverable(shipmentId) ){
             item._isDelivered = true;
         }
-        
+            
         shipmentsList[shipmentId - 1].items[itemIndex] = item;
         return getItem(shipmentId, item._id);
     }
@@ -100,6 +100,10 @@ contract ShippingContract {
     function isShipmentDelivered(uint256 shipmentsId) public view returns (bool){
         bool isDelivered = true;
         
+        if (shipmentsList[shipmentsId - 1].items[0]._id == 0){
+            isDelivered = false;
+        }
+        
         for (uint index = 0; index < shipmentsList[shipmentsId - 1]._itemsCount; index++) {
           if (shipmentsList[shipmentsId - 1].items[index]._isDelivered == false) {
               isDelivered = false;
@@ -109,12 +113,13 @@ contract ShippingContract {
         return isDelivered;
     }
     
-    function getShipment(uint256 shipmentsId) public view returns (uint256, uint256, string memory){
+    function getShipment(uint256 shipmentsId) public view returns (uint256, uint256, string memory, bool){
         Shipment memory shipment = shipmentsList[shipmentsId - 1];
-        return(shipment._id, shipment._itemsCount, shipment._companyName);
+        bool isDelivered = isShipmentDelivered(shipmentsId);
+        return(shipment._id, shipment._itemsCount, shipment._companyName, isDelivered);
     }
     
-    function getItemAtIndex(uint256 shipmentsId, uint256 index) private view returns (uint256, string memory, bool, bool, bool, bool, bool){
+    function getItemAtIndex(uint256 shipmentsId, uint256 index) public view returns (uint256, string memory, bool, bool, bool, bool, bool){
         Item storage i = shipmentsList[shipmentsId - 1].items[index];
         return (i._id, i._name, i._isCertified, i._isWrapped, i._isLoaded, i._isCleared, i._isDelivered);
     }
